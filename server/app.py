@@ -11,7 +11,7 @@ from openai import OpenAI
 import time
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
-from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool
+from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool, send_emails_tool
 from agents import Agents
 from tasks import Tasks
 from crewai import Crew
@@ -86,7 +86,7 @@ tools = [
         'type': 'function',
         'function': {
             'name': 'draft_emails_tool',
-            'description': "Use this tool to draft an email for the user.",
+            'description': "Use this tool only to draft an email for the user. Do not use it for sending an email.",
             'parameters': {
                 'type': 'object',
                 'properties': {
@@ -108,11 +108,65 @@ tools = [
                     },
                     'cc': {
                         'description': 'Additional recipients who will receive a copy of the email (carbon copy)',
-                        'type': 'string'
+                        'type': 'array',
+                        'items': {
+                            'type': 'string',
+                            'description': 'Email of each individual receiver'
+                        }
                     },
                     'bcc': {
                         'description': 'Blind carbon copy; additional recipients who will receive a copy of the email without other recipients being aware',
+                        'type': 'array',
+                        'items': {
+                            'type': 'string',
+                            'description': 'Email of each individual receiver'
+                        }
+                    }
+
+                },
+                'required': ['message', 'to', 'subject']
+            }
+        }
+    },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'send_emails_tool',
+            'description': "Use this tool when the user requests you to send an email. This tool creates and sends the email to the proper receipent",
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'description': 'The message for the email to be sent',
                         'type': 'string'
+                    },
+                    'to': {
+                        'description': 'The receivers to whom the mail is to be sent',
+                        'type': 'array',
+                        'items': {
+                            'type': 'string',
+                            'description': 'Email of each individual receiver'
+                        }
+                    },
+                    'subject': {
+                        'description': 'The subject of the email',
+                        'type': 'string'
+                    },
+                    'cc': {
+                        'description': 'Additional recipients who will receive a copy of the email (carbon copy)',
+                        'type': 'array',
+                        'items': {
+                            'type': 'string',
+                            'description': 'Email of each individual receiver'
+                        }
+                    },
+                    'bcc': {
+                        'description': 'Blind carbon copy; additional recipients who will receive a copy of the email without other recipients being aware',
+                        'type': 'array',
+                        'items': {
+                            'type': 'string',
+                            'description': 'Email of each individual receiver'
+                        }
                     }
 
                 },
@@ -128,7 +182,8 @@ available_tools = {
     'weather_tool': weather_tool,
     'calculator_tool': calculator_tool,
     'filter_emails_tool': filter_emails_tool,
-    'draft_emails_tool': draft_emails_tool
+    'draft_emails_tool': draft_emails_tool,
+    'send_emails_tool': send_emails_tool
 }
 
 def wait_on_run(run_id, thread_id):
@@ -166,6 +221,19 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
             elif tool_name=='filter_emails_tool':
                 output = tool_to_use()
             elif tool_name=='draft_emails_tool':
+                message = json.loads(tool_args)['message']
+                to = json.loads(tool_args)['to']
+                subject = json.loads(tool_args)['subject']
+                if 'cc' in json.loads(tool_args):
+                    cc = json.loads(tool_args)['cc']
+                    if 'bcc' in json.loads(tool_args):
+                        bcc = json.loads(tool_args)['bcc']
+                        output = tool_to_use(message=message, to=to, subject=subject, cc = cc, bcc=bcc)
+                    else:
+                        output = tool_to_use(message=message, to=to, subject=subject, cc = cc)
+                else:
+                    output = tool_to_use(message=message, to=to, subject=subject)                
+            elif tool_name=='send_emails_tool':
                 message = json.loads(tool_args)['message']
                 to = json.loads(tool_args)['to']
                 subject = json.loads(tool_args)['subject']
