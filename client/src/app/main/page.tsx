@@ -9,8 +9,9 @@ import { PinContainer } from "../components/ui/3d-pin";
 import { Contact } from "../components/ui/contact";
 import { cn } from "@/utils/cn";
 import hero from '../../public/hero1.jpeg'
-
 import Image from 'next/image';
+
+
 function Navbar({ className }: { className?: string }) {
   const [active, setActive] = useState<string | null>(null);
   return (
