@@ -8,6 +8,26 @@ import {
   IconBrandGoogle,
   IconBrandOnlyfans,
 } from "@tabler/icons-react";
+import reactElementToJSXString from "react-element-to-jsx-string";
+import { toast, Toaster } from "sonner";
+import { ButtonsCard } from "../app/components/ui/tailwindcss-buttons";
+
+export const buttons = [
+  {
+    name: "Border Magic",
+    description: "Border Magic button for your website",
+    showDot: false,
+    component: (
+      <button className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50">
+        <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]" />
+        <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white backdrop-blur-3xl">
+          <img width="24" height="24" src="https://img.icons8.com/material-rounded/24/FFFFFF/microphone.png" alt="microphone" /> Click to record 
+        </span>
+      </button>
+    ),
+  },
+]
+
 
 export default function SignupFormDemo() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -51,7 +71,19 @@ export default function SignupFormDemo() {
             type="twitterpassword"
           />
         </LabelInputContainer>
+        <LabelInputContainer className="mb-8">
+          <div className="w-full">
+            <Toaster position="top-center" />
+            <div className="mb-4">
+              {buttons.map((button, idx) => (
+                <ButtonsCard key={idx}>
+                  {button.component}
+                </ButtonsCard>
+              ))}
+            </div>
 
+          </div>
+        </LabelInputContainer>
         <button
           className="bg-gradient-to-br relative group/btn from-black dark:from-zinc-900 dark:to-zinc-900 to-neutral-600 block dark:bg-zinc-800 w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset]"
           type="submit"
@@ -59,6 +91,8 @@ export default function SignupFormDemo() {
           Sign up &rarr;
           <BottomGradient />
         </button>
+
+
 
         <div className="bg-gradient-to-r from-transparent via-neutral-300 dark:via-neutral-700 to-transparent my-8 h-[1px] w-full" />
 
