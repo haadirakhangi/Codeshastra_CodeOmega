@@ -3,3 +3,10 @@ streamlit_float
 openai
 audio_recorder_streamlit
 python-dotenv
+tavily-python
+crewai 
+crewai[tools]
+tiktoken
+langchain 
+langchain-openai
+langchainhub
