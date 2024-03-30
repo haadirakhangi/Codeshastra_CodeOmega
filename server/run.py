@@ -5,6 +5,8 @@ from audio_recorder_streamlit import audio_recorder
 from streamlit_float import *
 import os
 import openai
+import pveagle
+from pvrecorder import PvRecorder
 import ast
 import json
 from openai import OpenAI
@@ -15,7 +17,8 @@ from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool
 from agents import Agents
 from tasks import Tasks
 from crewai import Crew
-
+import pvcobra
+import time
 
 float_init()
 
@@ -253,6 +256,36 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
 
     return CLIENT.beta.threads.runs.submit_tool_outputs(thread_id=thread_id, run_id=run_id, tool_outputs=tools_outputs)
 
+
+def voice_activity_detection(access_key):
+    # Initialize the Cobra engine
+    cobra = pvcobra.create(access_key)
+    
+    # Initialize the recorder
+    recorder = PvRecorder(frame_length=cobra.frame_length)
+    recorder.start()
+    print("Listening for voice activity...")
+    voice_activity_detected = False
+    start_time = time.time()
+
+    while True:
+        frame = recorder.read()
+        # Process the frame with Cobra for voice activity detection
+        voice_probability = cobra.process(frame)
+
+        if voice_probability > 0.5: # Assuming a threshold of 0.5 for voice activity
+            voice_activity_detected = True
+            Voice_state=True
+            print("Voice activity detected.")
+            start_time = time.time()
+        elif voice_activity_detected and time.time() - start_time > 5:
+            print("No voice for 5 secs. \n Stopping...")
+            Voice_state=False
+            break
+
+    # Stop the recorder
+    recorder.stop()
+
 # Initialize session state for managing chat messages
 def initialize_session_state():
     assistant = CLIENT.beta.assistants.create(
@@ -262,11 +295,13 @@ def initialize_session_state():
         tools=tools
 )
     thread = CLIENT.beta.threads.create()
-
+    voice_state = False
     if 'assistant_id' not in st.session_state:
         st.session_state['assistant_id'] = assistant.id
     if 'thread_id' not in st.session_state:
         st.session_state['thread_id'] = thread.id
+    if 'voice_state' not in st.session_state:
+        st.session_state['voice_state'] = voice_state 
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": "Hi! How may I assist you today?"}]
 
@@ -276,7 +311,7 @@ st.title("OpenAI Conversational Chatbot 🤖")
 # Create a container for the microphone and audio recording
 footer_container = st.container()
 with footer_container:
-    audio_bytes = audio_recorder()
+    audio_bytes = audio_recorder()  
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):

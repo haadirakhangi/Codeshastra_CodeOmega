@@ -192,32 +192,3 @@ def get_mic_state():
 
 #----------------Detect Voice for 5 secs-------------------
 
-import pvcobra
-def voice_activity_detection(access_key):
-    # Initialize the Cobra engine
-    cobra = pvcobra.create(access_key)
-    
-    # Initialize the recorder
-    recorder = PvRecorder(frame_length=cobra.frame_length)
-    recorder.start()
-    print("Listening for voice activity...")
-    voice_activity_detected = False
-    start_time = time.time()
-
-    while True:
-        frame = recorder.read()
-        # Process the frame with Cobra for voice activity detection
-        voice_probability = cobra.process(frame)
-
-        if voice_probability > 0.5: # Assuming a threshold of 0.5 for voice activity
-            voice_activity_detected = True
-            Voice_state=True
-            print("Voice activity detected.")
-            start_time = time.time()
-        elif voice_activity_detected and time.time() - start_time > 5:
-            print("No voice for 5 secs. \n Stopping...")
-            Voice_state=False
-            break
-
-    # Stop the recorder
-    recorder.stop()
