@@ -3,7 +3,6 @@ import datetime
 from tavily import TavilyClient
 import os
 
-
 def weather_tool(latitude: float, longitude: float) -> dict:
     """Fetch current temperature for given coordinates."""
 
