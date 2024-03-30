@@ -20,4 +20,8 @@ pvporcupine
 flask_socketio
 wave
 flask-sqlalchemy
+<<<<<<< HEAD
 pvcobra
+=======
+flask-bcrypt
+>>>>>>> f42ec63a30c79ebe8895ac58a35e7c46f3c1d46b

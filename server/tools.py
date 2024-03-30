@@ -8,7 +8,9 @@ from agents import Agents
 from utils import *
 from tasks import Tasks
 from langchain_community.agent_toolkits import GmailToolkit
-from langchain_community.tools. gmail.search import GmailSearch
+from langchain_community.tools.gmail.search import GmailSearch
+from langchain_community.tools.gmail.create_draft import GmailCreateDraft
+from langchain_community.tools.gmail.send_message import GmailSendMessage
 from langchain_community.tools.gmail.utils import (
     build_resource_service,
     get_gmail_credentials,
@@ -35,8 +37,7 @@ def filter_emails_tool():
           "snippet": email["snippet"],
           "sender": email["sender"],
         }
-  )
-    
+  ) 
   filter_task = Tasks.filter_emails_task(agent=filter_agent, emails=mails)
   crew = Crew(
       agents=[filter_agent],
@@ -46,6 +47,74 @@ def filter_emails_tool():
   result= crew.kickoff()
   print('CREW RESULT',result)
   return result
+
+def draft_emails_tool(message:str, to:str, subject:str, cc=None, bcc=None):
+  draft_tool = GmailCreateDraft(api_resource=api_resource)
+  draft_agent = Agents.email_draft_agent()
+  draft_task = Tasks.draft_emails_task(agent=draft_agent, message=message, subject=subject)
+  crew = Crew(
+      agents=[draft_agent],
+      tasks=[draft_task],
+      verbose=2
+  )
+  result= crew.kickoff()
+  print('CREW RESULT', result)
+  if cc:
+     if bcc:   
+        return draft_tool.invoke({
+          "message": result,
+          "to": to,
+          "subject": subject,
+          "cc": cc,
+          "bcc": bcc
+    })
+     else:
+        return draft_tool.invoke({
+        "message": result,
+        "to": to,
+        "subject": subject,
+        "cc": cc,
+    })
+     
+  return draft_tool.invoke({
+        "message": result,
+        "to": to,
+        "subject": subject,
+    })
+
+def send_emails_tool(message:str, to:str, subject:str, cc=None, bcc=None):
+  send_tool= GmailSendMessage(api_resource=api_resource)
+  draft_agent = Agents.email_send_agent()
+  draft_task = Tasks.send_emails_task(agent=draft_agent, message=message, subject=subject)
+  crew = Crew(
+      agents=[draft_agent],
+      tasks=[draft_task],
+      verbose=2
+  )
+  result= crew.kickoff()
+  print('CREW RESULT', result)
+  if cc:
+     if bcc:   
+        return send_tool.invoke({
+          "message": result,
+          "to": to,
+          "subject": subject,
+          "cc": cc,
+          "bcc": bcc
+    })
+     else:
+        return send_tool.invoke({
+        "message": result,
+        "to": to,
+        "subject": subject,
+        "cc": cc,
+    })
+     
+  return send_tool.invoke({
+        "message": result,
+        "to": to,
+        "subject": subject,
+    })
 
 def weather_tool(latitude: float, longitude: float) -> dict:
     """Fetch current temperature for given coordinates."""

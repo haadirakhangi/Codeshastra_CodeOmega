@@ -25,43 +25,7 @@ def read_speaker_profiles(speaker_profile_files):
 
     return speaker_profiles, speaker_names
 
-# def initialize_recognizer(access_key, speaker_profile_files):
-    """
-    Initialize the EagleRecognizer, PvRecorder, and EagleProfiler.
-    """
-    global eagle_recognizer, recorder, eagle_profiler
 
-    # Read speaker profiles from files
-    speaker_profiles, speaker_names = read_speaker_profiles(speaker_profile_files)
-
-    # Create an EagleRecognizer instance
-    try:
-        eagle_recognizer = pveagle.create_recognizer(
-            access_key=access_key,
-            speaker_profiles=list(speaker_profiles.values()) # Pass the list of speaker profiles
-        )
-    except pveagle.EagleError as e:
-        print(f"Error creating EagleRecognizer: {e}")
-        return None
-
-    # Get the required frame length from the EagleRecognizer
-    frame_length = eagle_recognizer.frame_length
-
-    # Set up the PvRecorder for recognition
-    DEFAULT_DEVICE_INDEX = -1
-    recorder = PvRecorder(
-        device_index=DEFAULT_DEVICE_INDEX,
-        frame_length=frame_length  # Use the frame length required by the recognizer
-    )
-
-    # Create an EagleProfiler instance
-    try:
-        eagle_profiler = pveagle.create_profiler(access_key=access_key)
-    except pveagle.EagleError as e:
-        print(f"Error creating EagleProfiler: {e}")
-        return None
-
-    return speaker_profiles, speaker_names
 
 def initialize_recognizer(access_key, speaker_profile_files,speaker_names):
     """
