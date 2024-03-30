@@ -11,7 +11,7 @@ from openai import OpenAI
 import time
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
-from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool
+from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool
 from agents import Agents
 from tasks import Tasks
 from crewai import Crew
@@ -22,22 +22,21 @@ float_init()
 tools = [
     {
         'type': 'function',
-        'function': 
-         {
-              'name': 'search_tool',
-              'description': 'Get information about anything from the internet',
-              'parameters': {
-                  'type': 'object',
-                  'properties': {
-                      'query': {
-                          'description': 'The query to use to search on the internet',
-                          'type': 'string'
-                          }
-                      },
-                    'required': ['query']
-                  }
-              }
-        },
+        'function': {
+            'name': 'search_tool',
+            'description': 'Get information about anything from the internet',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'query': {
+                        'description': 'The query to use to search on the internet',
+                        'type': 'string'
+                    }
+                },
+                'required': ['query']
+            }
+        }
+    },
     {
         'type': 'function',
         'function': {
@@ -49,47 +48,87 @@ tools = [
                     'latitude': {
                         'description': 'Latitude of the location to fetch weather data for',
                         'type': 'number'
-                        },
+                    },
                     'longitude': {
                         'description': 'Longitude of the location to fetch weather data for',
                         'type': 'number'
-                        }
-                    },
-                  'required': ['latitude', 'longitude']
-                }
-            }
-        },
-        {
-            'type': 'function',
-            'function': {
-                'name': 'calculator_tool',
-                'description': "Performs a specified mathematical operation like sum, minus, multiplication, division, etc. The input to this tool should be a mathematical expression, a couple examples are `200*7` or `5000/2*10`",
-                'parameters': {
-                    'type': 'object',
-                    'properties': {
-                        'operation': {
-                            'description': 'The mathematical operations to perform',
-                            'type': 'string'
-                            }
-                        },
-                'required': ['operation']
-                }
-            }
-        },
-        {
-            'type': 'function',
-            'function': {
-                'name': 'filter_emails_tool',
-                'description': "Use to filter out non-essential emails like news letters and promotional content from gmail.",
+                    }
+                },
+                'required': ['latitude', 'longitude']
             }
         }
+    },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'calculator_tool',
+            'description': "Performs a specified mathematical operation like sum, minus, multiplication, division, etc. The input to this tool should be a mathematical expression, a couple examples are `200*7` or `5000/2*10`",
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'operation': {
+                        'description': 'The mathematical operations to perform',
+                        'type': 'string'
+                    }
+                },
+                'required': ['operation']
+            }
+        }
+    },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'filter_emails_tool',
+            'description': "Use to filter out non-essential emails like newsletters and promotional content from Gmail."
+        }
+    },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'draft_emails_tool',
+            'description': "Use this tool to draft an email for the user.",
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'message': {
+                        'description': 'The message for the draft email',
+                        'type': 'string'
+                    },
+                    'to': {
+                        'description': 'The receivers of the email',
+                        'type': 'array',
+                        'items': {
+                            'type': 'string',
+                            'description': 'Email of each individual receiver'
+                        }
+                    },
+                    'subject': {
+                        'description': 'The subject of the email',
+                        'type': 'string'
+                    },
+                    'cc': {
+                        'description': 'Additional recipients who will receive a copy of the email (carbon copy)',
+                        'type': 'string'
+                    },
+                    'bcc': {
+                        'description': 'Blind carbon copy; additional recipients who will receive a copy of the email without other recipients being aware',
+                        'type': 'string'
+                    }
+
+                },
+                'required': ['message', 'to', 'subject']
+            }
+        }
+    }
 ]
+
 
 available_tools = {
     'search_tool': search_tool,
     'weather_tool': weather_tool,
     'calculator_tool': calculator_tool,
-    'filter_emails_tool': filter_emails_tool
+    'filter_emails_tool': filter_emails_tool,
+    'draft_emails_tool': draft_emails_tool
 }
 
 def wait_on_run(run_id, thread_id):
@@ -126,6 +165,20 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
                 output = tool_to_use(operation=operation)
             elif tool_name=='filter_emails_tool':
                 output = tool_to_use()
+            elif tool_name=='draft_emails_tool':
+                message = json.loads(tool_args)['message']
+                to = json.loads(tool_args)['to']
+                subject = json.loads(tool_args)['subject']
+                if 'cc' in json.loads(tool_args):
+                    cc = json.loads(tool_args)['cc']
+                    if 'bcc' in json.loads(tool_args):
+                        bcc = json.loads(tool_args)['bcc']
+                        output = tool_to_use(message=message, to=to, subject=subject, cc = cc, bcc=bcc)
+                    else:
+                        output = tool_to_use(message=message, to=to, subject=subject, cc = cc)
+                else:
+                    output = tool_to_use(message=message, to=to, subject=subject)                
+                    
             if output:
                 tools_outputs.append(
                     {'tool_call_id': tool_call_id, 'output': output})

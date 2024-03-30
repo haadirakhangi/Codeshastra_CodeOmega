@@ -13,3 +13,16 @@ class Agents():
             verbose=True,
             allow_delegation=False
         )
+
+        def email_draft_agent():
+             return Agent(
+            role='Senior Email Drafter',
+            goal="Creates a draft of an email based on the user's request.",
+            llm= ChatOpenAI(model_name='gpt-3.5-turbo-1106'),
+            backstory=dedent ("""
+                ***Background***:
+                In this role, you possess substantial expertise in crafting compelling email content. Your proficiency lies in interpreting user requests accurately and skillfully composing emails with clear and nuanced language. You utilize your seasoned experience to comprehend the user's request thoroughly. You employ nuanced language to effectively convey the intended message.
+            """),
+            verbose=True,
+            allow_delegation=False
+        )
