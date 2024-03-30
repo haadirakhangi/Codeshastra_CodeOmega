@@ -4,8 +4,6 @@ from utils import get_answer, text_to_speech, autoplay_audio, speech_to_text
 from audio_recorder_streamlit import audio_recorder
 from streamlit_float import *
 
-# Initialize the client with your API credentials
-# Initialize floating features for the interface
 float_init()
 
 # Initialize session state for managing chat messages
