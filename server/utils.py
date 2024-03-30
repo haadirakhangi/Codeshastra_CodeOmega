@@ -1,12 +1,17 @@
 import streamlit as st
 from openai import OpenAI
 import base64
+from dotenv import load_dotenv, find_dotenv
+import os
 
-client = OpenAI(api_key = "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")
+load_dotenv(find_dotenv())
+
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+CLIENT = OpenAI(api_key= OPENAI_API_KEY)
 
 def speech_to_text(audio_data):
     with open(audio_data, "rb") as audio_file:
-        transcript = client.audio.transcriptions.create(
+        transcript = CLIENT.audio.transcriptions.create(
             model="whisper-1",
             response_format="text",
             file=audio_file
@@ -14,7 +19,7 @@ def speech_to_text(audio_data):
     return transcript
 
 def text_to_speech(input_text):
-    response = client.audio.speech.create(
+    response = CLIENT.audio.speech.create(
         model="tts-1",
         voice="nova",
         input=input_text
@@ -27,7 +32,7 @@ def text_to_speech(input_text):
 def get_answer(messages):
     system_message = [{"role": "system", "content": "You are an helpful AI chatbot, that answers questions asked by User."}]
     messages = system_message + messages
-    response = client.chat.completions.create(
+    response = CLIENT.chat.completions.create(
         model="gpt-3.5-turbo-1106",
         messages=messages
     )
