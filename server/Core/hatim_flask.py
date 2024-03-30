@@ -4,19 +4,25 @@ import pveagle
 from pvrecorder import PvRecorder
 import time
 import os
+from flask_socketio import SocketIO, emit
+import wave
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///speaker_profiles.db'
 db = SQLAlchemy(app)
 access_key=os.environ.get('PICOVOICE_API')
+
+
 
 class SpeakerProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     profile_data = db.Column(db.LargeBinary, nullable=False)
 
-    def __repr__(self):
+    def _repr_(self):
         return f"SpeakerProfile('{self.name}', '{self.profile_data}')"
+
+
 
 def split_audio_into_frames(audio_file, frame_duration_ms):
     frames = []
@@ -29,26 +35,32 @@ def split_audio_into_frames(audio_file, frame_duration_ms):
             frames.append(frame_data)
     return frames
 
-@app.route('/enroll', methods=['GET','POST'])
+def save_speaker(name,eagle_profiler):
+    speaker_profile = eagle_profiler.export()
+    a=speaker_profile.to_bytes()
+    print(a)
+    with open(f'{name}.txt', 'wb') as f:
+        f.write(a)
+
+def read_speaker():
+    
+
+@app.route('/enroll', methods=['GET']) #HASTANSHHHHH; 
 def enroll_speaker():
-    try:
-        eagle_profiler = pveagle.create_profiler(access_key=access_key)
-        recorder = PvRecorder(device_index=-1, frame_length=eagle_profiler.min_enroll_samples)
-        recorder.start()  # Start recording
-        enroll_percentage = 0.0
-        while enroll_percentage < 100.0:
-            audio_frame = recorder.read()  # Read audio frame from recorder
-            enroll_percentage, feedback = eagle_profiler.enroll(audio_frame)
-            print(f"Enrollment progress: {enroll_percentage}%")
-        recorder.stop()  # Stop recording
-        speaker_profile = eagle_profiler.export()
-        # Save the speaker profile to the database
-        new_speaker = SpeakerProfile(name="SpeakerName", profile_data=speaker_profile)
-        db.session.add(new_speaker)
-        db.session.commit()
-        return jsonify({"message": "Speaker enrolled successfully"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    audio_frames = split_audio_into_frames("test.wav", 1000)  # Split audio into 1-second frames
+    eagle_profiler = pveagle.create_profiler(access_key=access_key)
+    enroll_percentage = 0.0
+    while enroll_percentage < 100.0:  # Read audio frame from recorder
+        enroll_percentage, feedback = eagle_profiler.enroll(audio_frames[0])
+        print(f"Enrollment progress: {enroll_percentage}%")
+        print(feedback)
+    speaker_profile = eagle_profiler.export()
+    print(speaker_profile)
+    # Save the speaker profile to the database
+    # new_speaker = SpeakerProfile(name="Hatim", profile_data=speaker_profile)
+    # db.session.add(new_speaker)
+    # db.session.commit()
+    return jsonify({"message": "Speaker enrolled successfully"}), 200
 
 @app.route('/recognize', methods=['POST'])
 def recognize_speaker():
@@ -88,5 +100,5 @@ def recognize_speaker():
     finally:
         recorder_r.stop()
         eagle.delete()
-if __name__ == "__main__":
+if _name_ == "_main_":
     app.run(debug=True)
