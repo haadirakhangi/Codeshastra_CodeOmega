@@ -11,7 +11,11 @@ from openai import OpenAI
 import time
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
-from tools import search_tool, weather_tool
+from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool
+from agents import Agents
+from tasks import Tasks
+from crewai import Crew
+
 
 float_init()
 
@@ -54,12 +58,38 @@ tools = [
                   'required': ['latitude', 'longitude']
                 }
             }
+        },
+        {
+            'type': 'function',
+            'function': {
+                'name': 'calculator_tool',
+                'description': "Performs a specified mathematical operation like sum, minus, multiplication, division, etc. The input to this tool should be a mathematical expression, a couple examples are `200*7` or `5000/2*10`",
+                'parameters': {
+                    'type': 'object',
+                    'properties': {
+                        'operation': {
+                            'description': 'The mathematical operations to perform',
+                            'type': 'string'
+                            }
+                        },
+                'required': ['operation']
+                }
+            }
+        },
+        {
+            'type': 'function',
+            'function': {
+                'name': 'filter_emails_tool',
+                'description': "Use to filter out non-essential emails like news letters and promotional content from gmail.",
+            }
         }
 ]
 
 available_tools = {
     'search_tool': search_tool,
     'weather_tool': weather_tool,
+    'calculator_tool': calculator_tool,
+    'filter_emails_tool': filter_emails_tool
 }
 
 def wait_on_run(run_id, thread_id):
@@ -91,6 +121,11 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
                 latitude = json.loads(tool_args)['latitude']
                 longitude = json.loads(tool_args)['longitude']
                 output = tool_to_use(latitude=latitude, longitude=longitude)
+            elif tool_name=='calculator_tool':
+                operation = json.loads(tool_args)['operation']
+                output = tool_to_use(operation=operation)
+            elif tool_name=='filter_emails_tool':
+                output = tool_to_use()
             if output:
                 tools_outputs.append(
                     {'tool_call_id': tool_call_id, 'output': output})
@@ -101,7 +136,7 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
 def initialize_session_state():
     assistant = CLIENT.beta.assistants.create(
         name="Aura",
-        instructions="You are a helpful voice assistant. Think carefully about the user's request and assist the user. Make the best use of the tools provided to you.",
+        instructions="You are a helpful voice assistant. Think carefully about the user's request and assist the user. Make the best use of the tools provided to you. DO NOT use the tools if it is not required and you can answer the user by yourself.",
         model="gpt-3.5-turbo-1106",
         tools=tools
 )
@@ -160,7 +195,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking🤔..."):
             if run.status == 'failed':
-                print(run.error)
+                print('RUN ERROR',run.message)
             elif run.status == 'requires_action':
                 run = submit_tool_outputs(thread_id, run.id, run.required_action.submit_tool_outputs.tool_calls)
                 run = wait_on_run(run.id,thread_id)
