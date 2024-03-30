@@ -7,7 +7,7 @@ import os
 from flask_socketio import SocketIO, emit
 import wave
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///speaker_profiles.db'
 db = SQLAlchemy(app)
 access_key=os.environ.get('PICOVOICE_API')
@@ -45,22 +45,72 @@ def save_speaker(name,eagle_profiler):
 def read_speaker():
     
 
+# @app.route('/enroll', methods=['GET']) #HASTANSHHHHH; 
+# def enroll_speaker():
+#     audio_frames = split_audio_into_frames("test.wav", 1000)  # Split audio into 1-second frames
+#     eagle_profiler = pveagle.create_profiler(access_key=access_key)
+#     enroll_percentage = 0.0
+#     while enroll_percentage < 100.0:  # Read audio frame from recorder
+#         enroll_percentage, feedback = eagle_profiler.enroll(audio_frames[0])
+#         print(f"Enrollment progress: {enroll_percentage}%")
+#         print(feedback)
+#     speaker_profile = eagle_profiler.export()
+#     print(speaker_profile)
+#     # Save the speaker profile to the database
+#     # new_speaker = SpeakerProfile(name="Hatim", profile_data=speaker_profile)
+#     # db.session.add(new_speaker)
+#     # db.session.commit()
+#     return jsonify({"message": "Speaker enrolled successfully"}), 200
+
 @app.route('/enroll', methods=['GET']) #HASTANSHHHHH; 
-def enroll_speaker():
-    audio_frames = split_audio_into_frames("test.wav", 1000)  # Split audio into 1-second frames
-    eagle_profiler = pveagle.create_profiler(access_key=access_key)
-    enroll_percentage = 0.0
-    while enroll_percentage < 100.0:  # Read audio frame from recorder
-        enroll_percentage, feedback = eagle_profiler.enroll(audio_frames[0])
-        print(f"Enrollment progress: {enroll_percentage}%")
-        print(feedback)
-    speaker_profile = eagle_profiler.export()
-    print(speaker_profile)
-    # Save the speaker profile to the database
-    # new_speaker = SpeakerProfile(name="Hatim", profile_data=speaker_profile)
-    # db.session.add(new_speaker)
-    # db.session.commit()
-    return jsonify({"message": "Speaker enrolled successfully"}), 200
+def enroll_new_member(speaker_profiles, speaker_names):
+    """
+    Enroll a new member and update the speaker profiles and names dictionaries.
+    """
+    global eagle_profiler, recorder
+
+    speaker_name = input("Enter name for the new speaker: ")
+
+    # Set up the PvRecorder with the minimum enrollment samples
+    DEFAULT_DEVICE_INDEX = -1
+    recorder = PvRecorder(
+        device_index=DEFAULT_DEVICE_INDEX,
+        frame_length=eagle_profiler.min_enroll_samples
+    )
+
+    # Start recording
+    recorder.start()
+
+    try:
+        # Enroll the speaker
+        enroll_percentage = 0.0
+        while enroll_percentage < 100.0:
+            audio_frame = recorder.read()
+            enroll_percentage, feedback = eagle_profiler.enroll(audio_frame)
+            print(f"Enrollment progress: {enroll_percentage}%")
+            print(feedback)
+
+        # Export the speaker profile
+        speaker_profile = eagle_profiler.export()
+
+        # speaker_profile = eagle_profiler.export()
+        a=speaker_profile.to_bytes()
+        print(a)
+        with open(f'{speaker_name}.txt', 'wb') as f:
+            f.write(a)
+
+        # Add the new speaker profile and name to dictionaries
+        speaker_id = len(speaker_profiles)
+        speaker_profiles[speaker_id] = speaker_profile
+        speaker_names[speaker_profile] = speaker_name
+
+        print(f"Enrollment completed for speaker {speaker_name}.")
+    
+    finally:
+        # Stop recording and clean up resources
+        recorder.stop()
+        # recorder.delete()
+
 
 @app.route('/recognize', methods=['POST'])
 def recognize_speaker():

@@ -17,6 +17,8 @@ from tasks import Tasks
 from crewai import Crew
 
 
+Voice_state=False
+
 float_init()
 
 tools = [
@@ -212,3 +214,75 @@ if st.session_state.messages[-1]["role"] != "assistant":
         st.session_state.messages.append({"role": "assistant", "content": chatbotReply})
         os.remove(audio_file)
            
+# from faster_whisper import WhisperModel
+
+
+# def WhisperShit():
+#     model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        
+
+#---------------------PORCUPINE-------------------------
+import pvporcupine
+from pvrecorder import PvRecorder
+
+def get_mic_state():
+    # Set up the PvRecorder with the minimum enrollment samples
+    DEFAULT_DEVICE_INDEX = -1
+    recorder = PvRecorder(
+        device_index=DEFAULT_DEVICE_INDEX,
+        frame_length=512
+    )
+
+
+    porcupine = pvporcupine.create(
+    access_key='V8ZLdwTq3DHObCXeTZjWPOJs1ciBCmjvjIJNE7O3HTDQQXD2kuBcog==',
+    keyword_paths=['Hey-Aura_en_windows_v3_0_0.ppn']
+    #   keywords=['picovoice', 'bumblebee','Hey Aura'],
+    #   model_path='Hey-Aura_en_windows_v3_0_0.ppn'
+    )
+
+
+    recorder.start()
+    while True:
+        audio_frame = recorder.read()
+        keyword_index = porcupine.process(audio_frame)
+
+        if keyword_index == 0:
+            print('Hey Aura detected')
+            return 1
+        else:
+            # get_mic_state()
+            return 0
+
+#----------------Detect Voice for 5 secs-------------------
+
+import pvcobra
+def voice_activity_detection(access_key):
+    # Initialize the Cobra engine
+    cobra = pvcobra.create(access_key)
+    
+    # Initialize the recorder
+    recorder = PvRecorder(frame_length=cobra.frame_length)
+    recorder.start()
+    print("Listening for voice activity...")
+    voice_activity_detected = False
+    start_time = time.time()
+
+    while True:
+        frame = recorder.read()
+        # Process the frame with Cobra for voice activity detection
+        voice_probability = cobra.process(frame)
+
+        if voice_probability > 0.5: # Assuming a threshold of 0.5 for voice activity
+            voice_activity_detected = True
+            Voice_state=True
+            print("Voice activity detected.")
+            start_time = time.time()
+        elif voice_activity_detected and time.time() - start_time > 5:
+            print("No voice for 5 secs. \n Stopping...")
+            Voice_state=False
+            break
+
+    # Stop the recorder
+    recorder.stop()
+        

@@ -20,3 +20,4 @@ pvporcupine
 flask_socketio
 wave
 flask-sqlalchemy
+pvcobra
