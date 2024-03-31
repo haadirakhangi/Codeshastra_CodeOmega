@@ -13,6 +13,10 @@ from flask_cors import CORS,cross_origin
 from flask import send_file
 from werkzeug.utils import secure_filename
 
+
+Voice_state=False
+
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///speaker_profiles.db'
 db.init_app(app)
@@ -218,3 +222,49 @@ def recognize_speaker():
         eagle.delete()
 if __name__== "__main__":
     app.run(debug=True)
+
+
+
+
+# from faster_whisper import WhisperModel
+
+
+# def WhisperShit():
+#     model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        
+
+#---------------------PORCUPINE-------------------------
+import pvporcupine
+from pvrecorder import PvRecorder
+
+def get_mic_state():
+    # Set up the PvRecorder with the minimum enrollment samples
+    DEFAULT_DEVICE_INDEX = -1
+    recorder = PvRecorder(
+        device_index=DEFAULT_DEVICE_INDEX,
+        frame_length=512
+    )
+
+
+    porcupine = pvporcupine.create(
+    access_key='V8ZLdwTq3DHObCXeTZjWPOJs1ciBCmjvjIJNE7O3HTDQQXD2kuBcog==',
+    keyword_paths=['Hey-Aura_en_windows_v3_0_0.ppn']
+    #   keywords=['picovoice', 'bumblebee','Hey Aura'],
+    #   model_path='Hey-Aura_en_windows_v3_0_0.ppn'
+    )
+
+
+    recorder.start()
+    while True:
+        audio_frame = recorder.read()
+        keyword_index = porcupine.process(audio_frame)
+
+        if keyword_index == 0:
+            print('Hey Aura detected')
+            return 1
+        else:
+            # get_mic_state()
+            return 0
+
+#----------------Detect Voice for 5 secs-------------------
+

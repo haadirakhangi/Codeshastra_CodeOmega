@@ -13,13 +13,19 @@ from openai import OpenAI
 import time
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
-from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool, send_emails_tool, create_calender_events_tool, list_calender_events_tool,run_script_bash
+from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool, send_emails_tool
 from agents import Agents
 from tasks import Tasks
 from crewai import Crew
-from datetime import datetime, timedelta
+import pvcobra
+import time
+import pvporcupine
+from pvrecorder import PvRecorder
+import pyaudio
+import wave
 
 float_init()
+
 
 tools = [
     {
@@ -263,6 +269,7 @@ available_tools = {
     "run_script_bash" : run_script_bash
 }
 
+
 def wait_on_run(run_id, thread_id):
         while True:
             run = CLIENT.beta.threads.runs.retrieve(
@@ -271,8 +278,6 @@ def wait_on_run(run_id, thread_id):
             )
             print('RUN STATUS', run.status)
             time.sleep(0.5)
-            if run.status in ['failed']:
-                print('RUN ERROR', run.last_error)
             if run.status in ['failed', 'completed', 'requires_action']:
                 return run
 
@@ -324,7 +329,8 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
                     else:
                         output = tool_to_use(message=message, to=to, subject=subject, cc = cc)
                 else:
-                    output = tool_to_use(message=message, to=to, subject=subject) 
+                    output = tool_to_use(message=message, to=to, subject=subject)                
+                
             elif tool_name=='list_calender_events_tool':
                 start_datetime = json.loads(tool_args)['start_datetime']               
                 end_datetime = json.loads(tool_args)['end_datetime']     
@@ -353,6 +359,166 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
 
     return CLIENT.beta.threads.runs.submit_tool_outputs(thread_id=thread_id, run_id=run_id, tool_outputs=tools_outputs)
 
+
+
+
+
+# Set up the PvRecorder with the minimum enrollment samples
+porcupine = pvporcupine.create(
+  access_key='V8ZLdwTq3DHObCXeTZjWPOJs1ciBCmjvjIJNE7O3HTDQQXD2kuBcog==',
+  keyword_paths=['Hey-Aura_en_windows_v3_0_0.ppn']
+#   keywords=['picovoice', 'bumblebee','Hey Aura'],
+#   model_path='Hey-Aura_en_windows_v3_0_0.ppn'
+)
+
+
+audio_bytes = False
+command_given = False
+
+
+def update_chat():
+    print("Updating chat...")
+    
+    # Get the current messages
+    current_messages = st.session_state.get("messages", [])
+    print("Current Messages:", current_messages)
+    
+    # Get the last displayed message index
+    last_displayed_index = st.session_state.get("last_displayed_index", -1)
+    print("Last Displayed Index:", last_displayed_index)
+    
+    # Check if there are new messages to display
+    if len(current_messages) > last_displayed_index + 1:
+        print("New messages found...")
+        # Display new messages since the last update
+        for message in current_messages[last_displayed_index + 1:]:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
+        
+        # Update the last displayed index
+        st.session_state.last_displayed_index = len(current_messages) - 1
+        print("Updated last displayed index to:", st.session_state.last_displayed_index)
+    else:
+        print("No new messages to display.")
+
+
+
+def get_command():
+    if audio_bytes:
+        print("command taken")
+        global assistant_id,thread_id
+        assistant_id = st.session_state['assistant_id']
+        thread_id = st.session_state['thread_id']
+        with st.spinner("Transcribing..."):
+            # Write the audio bytes to a temporary file
+            webm_file_path = "output.wav"
+
+            # Convert the audio to text using the speech_to_text function
+            transcript = speech_to_text(webm_file_path)
+
+            if transcript:
+                st.session_state.messages.append({"role": "user", "content": transcript})
+                with st.chat_message("user"):
+                    st.write(transcript)
+                os.remove(webm_file_path)
+        print("1")
+        # update_chat()
+        get_assistant()
+            
+def get_assistant():
+    if st.session_state.messages[-1]["role"] != "assistant":
+        global command_given,message
+        command_given = True
+        message = CLIENT.beta.threads.messages.create(
+            thread_id= thread_id,
+            role="user",
+            content= st.session_state.messages[-1]['content'],
+        )
+        run = CLIENT.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id= assistant_id,
+        )
+        run = wait_on_run(run.id, thread_id)
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking🤔..."):
+                if run.status == 'failed':
+                    print('RUN ERROR',run.message)
+                elif run.status == 'requires_action':
+                    run = submit_tool_outputs(thread_id, run.id, run.required_action.submit_tool_outputs.tool_calls)
+                    run = wait_on_run(run.id,thread_id)
+                messages = CLIENT.beta.threads.messages.list(thread_id= thread_id,order="asc")
+                content = None
+                for thread_message in messages.data:
+                    content = thread_message.content
+                chatbotReply = content[0].text.value
+                print('CHATBOT REPLY', chatbotReply)
+            with st.spinner("Generating audio response..."):    
+                audio_file = text_to_speech(chatbotReply)
+                autoplay_audio(audio_file)
+            st.write(chatbotReply)
+            st.session_state.messages.append({"role": "assistant", "content": chatbotReply})
+            os.remove(audio_file)
+    print("2")
+    # update_chat()
+    voice_identification_detection()
+
+def record_audio(file_name, duration=5, sample_rate=44100, chunk_size=1024, format=pyaudio.paInt16, channels=2):
+    audio = pyaudio.PyAudio()
+
+    global audio_bytes
+    audio_bytes = True
+    # Open the audio stream
+    stream = audio.open(format=format,
+                        channels=channels,
+                        rate=sample_rate,
+                        input=True,
+                        frames_per_buffer=chunk_size)
+
+    print("Recording...")
+
+    frames = []
+
+    # Record audio for the specified duration
+    for i in range(int(sample_rate / chunk_size * duration)):
+        data = stream.read(chunk_size)
+        frames.append(data)
+
+    print("Finished recording.")
+
+    # Stop and close the audio stream
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
+
+    # Save the recorded audio to a WAV file
+    with wave.open(file_name, 'wb') as wf:
+        wf.setnchannels(channels)
+        wf.setsampwidth(audio.get_sample_size(format))
+        wf.setframerate(sample_rate)
+        wf.writeframes(b''.join(frames))
+    get_command()
+
+
+
+def voice_identification_detection():
+    DEFAULT_DEVICE_INDEX = -1
+    recorder = PvRecorder(
+        device_index=DEFAULT_DEVICE_INDEX,
+        frame_length=512
+    )
+    recorder.start()
+    print("Waiting for user to say Hey Aura")
+    while True:
+        audio_frame = recorder.read()
+        keyword_index = porcupine.process(audio_frame)
+
+        if keyword_index == 0:
+            print('Hey Aura detected')
+            record_audio("output.wav", duration=5)
+            break
+
+    recorder.stop()
+
 # Initialize session state for managing chat messages
 def initialize_session_state():
     assistant = CLIENT.beta.assistants.create(
@@ -360,7 +526,7 @@ def initialize_session_state():
         instructions="You are a helpful voice assistant. Think carefully about the user's request and assist the user. Make the best use of the tools provided to you. DO NOT use the tools if it is not required and you can answer the user by yourself.",
         model="gpt-3.5-turbo-1106",
         tools=tools
-)
+    )
     thread = CLIENT.beta.threads.create()
     voice_state = False
     if 'assistant_id' not in st.session_state:
@@ -371,67 +537,20 @@ def initialize_session_state():
         st.session_state['voice_state'] = voice_state 
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": "Hi! How may I assist you today?"}]
+    print("4")
+    update_chat()
 
-initialize_session_state()
 
-st.title("OpenAI Conversational Chatbot 🤖")
+st.title("Aura 🤖")
 # Create a container for the microphone and audio recording
 footer_container = st.container()
-with footer_container:
-    audio_bytes = audio_recorder()  
+if command_given==False:
+    initialize_session_state()
+    voice_identification_detection()
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
 
-   
-if audio_bytes:
-    assistant_id = st.session_state['assistant_id']
-    thread_id = st.session_state['thread_id']
-    with st.spinner("Transcribing..."):
-        # Write the audio bytes to a temporary file
-        webm_file_path = "temp_audio.mp3"
-        with open(webm_file_path, "wb") as f:
-            f.write(audio_bytes)
 
-        # Convert the audio to text using the speech_to_text function
-        transcript = speech_to_text(webm_file_path)
 
-        if transcript:
-            st.session_state.messages.append({"role": "user", "content": transcript})
-            with st.chat_message("user"):
-                st.write(transcript)
-            os.remove(webm_file_path)
-            
- 
-if st.session_state.messages[-1]["role"] != "assistant":
-    message = CLIENT.beta.threads.messages.create(
-        thread_id= thread_id,
-        role="user",
-        content= st.session_state.messages[-1]['content'],
-    )
-    run = CLIENT.beta.threads.runs.create(
-        thread_id=thread_id,
-        assistant_id= assistant_id,
-    )
-    run = wait_on_run(run.id, thread_id)
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking🤔..."):
-            if run.status == 'failed':
-                print('RUN ERROR',run.last_error)
-            elif run.status == 'requires_action':
-                run = submit_tool_outputs(thread_id, run.id, run.required_action.submit_tool_outputs.tool_calls)
-                run = wait_on_run(run.id,thread_id)
-            messages = CLIENT.beta.threads.messages.list(thread_id= thread_id,order="asc")
-            content = None
-            for thread_message in messages.data:
-                content = thread_message.content
-            chatbotReply = content[0].text.value
-            print('CHATBOT REPLY', chatbotReply)
-        with st.spinner("Generating audio response..."):    
-            audio_file = text_to_speech(chatbotReply)
-            autoplay_audio(audio_file)
-        st.write(chatbotReply)
-        st.session_state.messages.append({"role": "assistant", "content": chatbotReply})
-        os.remove(audio_file)
+
+
            

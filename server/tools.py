@@ -15,14 +15,17 @@ from langchain_community.tools.gmail.utils import (
     build_resource_service,
     get_gmail_credentials,
 )
+from calender_agent import ListGoogleCalendarEvents, CreateGoogleCalendarEvent
 
 
 credentials = get_gmail_credentials(
     token_file="token.json",
-    scopes= ["https://mail.google.com/"],
+    scopes= ["https://mail.google.com/", "https://www.googleapis.com/auth/calendar"],
     client_secrets_file="credentials.json"
 )
 api_resource = build_resource_service(credentials=credentials)
+calendar_service = build_resource_service(credentials=credentials, service_name='calendar', service_version='v3')
+
 
 def filter_emails_tool():
   filter_agent = Agents.email_filter_agent()
@@ -116,6 +119,43 @@ def send_emails_tool(message:str, to:str, subject:str, cc=None, bcc=None):
         "subject": subject,
     })
 
+def list_calender_events_tool(start_date, end_date):
+  geteventstool = ListGoogleCalendarEvents.from_api_resource(calendar_service)
+  tool_res = geteventstool.run(tool_input={"start_datetime": start_date, "end_datetime":end_date, "max_results":10})
+  print(tool_res)
+  all_output = ""
+  for e in tool_res:
+    print(e['start'], e['summary'])
+    all_output += e['start'] + ' ' + e['summary'] + '\n'
+   
+  print(all_output)
+  return all_output
+
+def create_calender_events_tool(start_date, end_date, summary, location=None, description=None):
+  createeventtool = CreateGoogleCalendarEvent.from_api_resource(calendar_service)
+  if location:
+     if description:
+        return createeventtool.run(tool_input={
+      "start_datetime": start_date,
+      "end_datetime": end_date, 
+      "summary": summary,
+      "location": location,
+      "description": description
+      })
+     else:
+        return createeventtool.run(tool_input={
+      "start_datetime": start_date,
+      "end_datetime": end_date, 
+      "summary": summary,
+      "location": location,
+      })
+  return createeventtool.run(tool_input={
+      "start_datetime": start_date,
+      "end_datetime": end_date, 
+      "summary": summary
+      })
+
+
 def weather_tool(latitude: float, longitude: float) -> dict:
     """Fetch current temperature for given coordinates."""
 
@@ -161,3 +201,22 @@ def calculator_tool(operation:str)-> str:
     return f"The result of the operation is {output}"
   except SyntaxError:
     return "Error: Invalid syntax in mathematical expression"
+  
+def run_script_bash(user_request):
+  directory_agent = Agents.directory_search_agent()
+  directory_search_task = Tasks.search_directory_task(agent=directory_agent, user_request=user_request)
+  crew = Crew(
+      agents=[directory_agent],
+      tasks=[directory_search_task],
+      verbose=2
+  )
+  result= crew.kickoff()
+  print('RESULT', result)
+  try:
+    directory_path = "script_test"
+    os.chdir(directory_path)
+    os.system(f'cmd /c "{result}"') 
+    # os.chdir("..")
+    return f"Your command ```{user_request}``` has been executed successfully!"
+  except SyntaxError:
+    return "Error: Invalid syntax in bash command" 
