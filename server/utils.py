@@ -9,7 +9,7 @@ load_dotenv(find_dotenv())
 
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 CLIENT = OpenAI(api_key= OPENAI_API_KEY)
-
+print("OPENAI_API_KEy", OPENAI_API_KEY)
 
 def speech_to_text(audio_data):
     with open(audio_data, "rb") as audio_file:

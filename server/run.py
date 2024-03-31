@@ -271,6 +271,8 @@ def wait_on_run(run_id, thread_id):
             )
             print('RUN STATUS', run.status)
             time.sleep(0.5)
+            if run.status in ['failed']:
+                print('RUN ERROR', run.last_error)
             if run.status in ['failed', 'completed', 'requires_action']:
                 return run
 
@@ -351,36 +353,6 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
 
     return CLIENT.beta.threads.runs.submit_tool_outputs(thread_id=thread_id, run_id=run_id, tool_outputs=tools_outputs)
 
-
-def voice_activity_detection(access_key):
-    # Initialize the Cobra engine
-    cobra = pvcobra.create(access_key)
-    
-    # Initialize the recorder
-    recorder = PvRecorder(frame_length=cobra.frame_length)
-    recorder.start()
-    print("Listening for voice activity...")
-    voice_activity_detected = False
-    start_time = time.time()
-
-    while True:
-        frame = recorder.read()
-        # Process the frame with Cobra for voice activity detection
-        voice_probability = cobra.process(frame)
-
-        if voice_probability > 0.5: # Assuming a threshold of 0.5 for voice activity
-            voice_activity_detected = True
-            Voice_state=True
-            print("Voice activity detected.")
-            start_time = time.time()
-        elif voice_activity_detected and time.time() - start_time > 5:
-            print("No voice for 5 secs. \n Stopping...")
-            Voice_state=False
-            break
-
-    # Stop the recorder
-    recorder.stop()
-
 # Initialize session state for managing chat messages
 def initialize_session_state():
     assistant = CLIENT.beta.assistants.create(
@@ -446,7 +418,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking🤔..."):
             if run.status == 'failed':
-                print('RUN ERROR',run.message)
+                print('RUN ERROR',run.last_error)
             elif run.status == 'requires_action':
                 run = submit_tool_outputs(thread_id, run.id, run.required_action.submit_tool_outputs.tool_calls)
                 run = wait_on_run(run.id,thread_id)
