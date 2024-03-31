@@ -442,7 +442,7 @@ def initialize_session_state():
     update_chat()
 
 
-st.title("OpenAI Conversational Chatbot 🤖")
+st.title("Aura 🤖")
 # Create a container for the microphone and audio recording
 footer_container = st.container()
 if command_given==False:
