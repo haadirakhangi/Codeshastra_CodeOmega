@@ -280,48 +280,48 @@ const LandingPage = () => {
       </div>
       <div className="h-[40rem] w-full flex items-center justify-center flex-wrap">
         <PinContainer
-          title="/ui.aceternity.com"
+          title="mail"
           href="https://twitter.com/mannupaaji"
         >
           <div className="flex basis-full flex-col p-4 tracking-tight text-slate-100/50 sm:basis-1/2 w-[20rem] h-[20rem] ">
             <h3 className="max-w-xs !pb-2 !m-0 font-bold  text-base text-slate-100">
-              Aceternity UI
+              Automated Mail Drafting
             </h3>
             <div className="text-base !m-0 !p-0 font-normal">
               <span className="text-slate-500 ">
-                Customizable Tailwind CSS and Framer Motion Components.
+                Automated mail drafting ande sending through voice
               </span>
             </div>
             <div className="flex flex-1 w-full rounded-lg mt-4 bg-gradient-to-br from-violet-500 via-purple-500 to-blue-500" />
           </div>
         </PinContainer>
         <PinContainer
-          title="/ui.aceternity.com"
+          title="cmd"
           href="https://twitter.com/mannupaaji"
         >
           <div className="flex basis-full flex-col p-4 tracking-tight text-slate-100/50 sm:basis-1/2 w-[20rem] h-[20rem] ">
             <h3 className="max-w-xs !pb-2 !m-0 font-bold  text-base text-slate-100">
-              Aceternity UI
+              Automated command line utility
             </h3>
             <div className="text-base !m-0 !p-0 font-normal">
               <span className="text-slate-500 ">
-                Customizable Tailwind CSS and Framer Motion Components.
+                Use the command line in natural language through your voice
               </span>
             </div>
             <div className="flex flex-1 w-full rounded-lg mt-4 bg-gradient-to-br from-violet-500 via-purple-500 to-blue-500" />
           </div>
         </PinContainer>
         <PinContainer
-          title="/ui.aceternity.com"
+          title="Calendar"
           href="https://twitter.com/mannupaaji"
         >
           <div className="flex basis-full flex-col p-4 tracking-tight text-slate-100/50 sm:basis-1/2 w-[20rem] h-[20rem] ">
             <h3 className="max-w-xs !pb-2 !m-0 font-bold  text-base text-slate-100">
-              Aceternity UI
+              Automated scheduling and reminders
             </h3>
             <div className="text-base !m-0 !p-0 font-normal">
               <span className="text-slate-500 ">
-                Customizable Tailwind CSS and Framer Motion Components.
+                Schedule events through your voice and get reminders
               </span>
             </div>
             <div className="flex flex-1 w-full rounded-lg mt-4 bg-gradient-to-br from-violet-500 via-purple-500 to-blue-500" />
