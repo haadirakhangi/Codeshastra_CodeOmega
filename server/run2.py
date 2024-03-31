@@ -8,24 +8,22 @@ import openai
 import pveagle
 from pvrecorder import PvRecorder
 import ast
+import struct
 import json
 from openai import OpenAI
 import time
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
-from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool, send_emails_tool
+from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool, send_emails_tool, create_calender_events_tool, list_calender_events_tool,run_script_bash
 from agents import Agents
 from tasks import Tasks
 from crewai import Crew
-import pvcobra
-import time
-import pvporcupine
-from pvrecorder import PvRecorder
 import pyaudio
 import wave
+import pvporcupine
+from datetime import datetime, timedelta
 
 float_init()
-
 
 tools = [
     {
@@ -269,7 +267,6 @@ available_tools = {
     "run_script_bash" : run_script_bash
 }
 
-
 def wait_on_run(run_id, thread_id):
         while True:
             run = CLIENT.beta.threads.runs.retrieve(
@@ -278,6 +275,8 @@ def wait_on_run(run_id, thread_id):
             )
             print('RUN STATUS', run.status)
             time.sleep(0.5)
+            if run.status in ['failed']:
+                print('RUN ERROR', run.last_error)
             if run.status in ['failed', 'completed', 'requires_action']:
                 return run
 
@@ -329,8 +328,7 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
                     else:
                         output = tool_to_use(message=message, to=to, subject=subject, cc = cc)
                 else:
-                    output = tool_to_use(message=message, to=to, subject=subject)                
-                
+                    output = tool_to_use(message=message, to=to, subject=subject) 
             elif tool_name=='list_calender_events_tool':
                 start_datetime = json.loads(tool_args)['start_datetime']               
                 end_datetime = json.loads(tool_args)['end_datetime']     
@@ -358,10 +356,6 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
                 tools_outputs.append({'tool_call_id': tool_call_id, 'output': output})
 
     return CLIENT.beta.threads.runs.submit_tool_outputs(thread_id=thread_id, run_id=run_id, tool_outputs=tools_outputs)
-
-
-
-
 
 # Set up the PvRecorder with the minimum enrollment samples
 porcupine = pvporcupine.create(
@@ -464,7 +458,6 @@ def get_assistant():
 
 def record_audio(file_name, duration=5, sample_rate=44100, chunk_size=1024, format=pyaudio.paInt16, channels=2):
     audio = pyaudio.PyAudio()
-
     global audio_bytes
     audio_bytes = True
     # Open the audio stream
@@ -514,7 +507,7 @@ def voice_identification_detection():
 
         if keyword_index == 0:
             print('Hey Aura detected')
-            record_audio("output.wav", duration=5)
+            record_audio("output.wav", duration=8)
             break
 
     recorder.stop()
@@ -546,11 +539,4 @@ st.title("Aura 🤖")
 footer_container = st.container()
 if command_given==False:
     initialize_session_state()
-    voice_identification_detection()
-
-
-
-
-
-
-           
+    voice_identification_detection()        
