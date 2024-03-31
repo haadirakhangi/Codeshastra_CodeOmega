@@ -76,22 +76,24 @@ export default function SignupFormDemo() {
 
   const submitForm = async () => {
     try {
-      const formDataObj = new FormData();
-      formDataObj.append('firstname', formData.firstname);
-      formDataObj.append('lastname', formData.lastname);
-      formDataObj.append('email', formData.email);
-      formDataObj.append('password', formData.password);
-      formDataObj.append('voice_data', formData.voice_data); // Append audio blob
+        const formDataObj = new FormData();
+        formDataObj.append('firstname', formData.firstname);
+        formDataObj.append('lastname', formData.lastname);
+        formDataObj.append('email', formData.email);
+        formDataObj.append('password', formData.password);
 
-      const response = await axios.post("http://127.0.0.1:5000/register", formDataObj);
-      console.log("Form submitted:", response.data);
+        const response = await axios.post("http://127.0.0.1:5000/register", formDataObj);
+        console.log("Form submitted:", response.data);
 
-      // Handle successful form submission here
+        // Handle successful form submission here
+        // Redirect to another route using window.location.href
+        window.location.href = "http://127.0.0.1:8501"; // Change "/success" to your desired route
     } catch (error) {
-      console.error("Error submitting form:", error);
-      // Handle error here
+        console.error("Error submitting form:", error);
+        // Handle error here
     }
-  };
+};
+
 
   return (
     <div className="max-w-md w-full mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-white dark:bg-black mt-12">
