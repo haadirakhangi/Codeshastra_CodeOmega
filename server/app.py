@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import pveagle
 from pvrecorder import PvRecorder
+from flask_socketio import SocketIO
 from utils import *
 import os
 # from flask_socketio import SocketIO, emit
@@ -12,10 +13,6 @@ from models import db, Users, Device
 from flask_cors import CORS,cross_origin
 from flask import send_file
 from werkzeug.utils import secure_filename
-
-
-Voice_state=False
-
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///speaker_profiles.db'
@@ -40,7 +37,7 @@ bcrypt = Bcrypt(app)
 
 def split_audio_into_frames(audio_file, frame_duration_ms):
     frames = []
-    with wave.open(audio_file, 'rb') as wf:
+    with wave.open(r'C:\Users\Hastansh\Desktop\CodeShastra\Codeshastra_CodeOmega\server\voices\nagmail.com_blob.wav', 'rb') as wf:
         frame_size = int(frame_duration_ms * wf.getframerate() / 1000)  # Calculate frame size in samples
         while True:
             frame_data = wf.readframes(frame_size)
@@ -222,49 +219,4 @@ def recognize_speaker():
         eagle.delete()
 if __name__== "__main__":
     app.run(debug=True)
-
-
-
-
-# from faster_whisper import WhisperModel
-
-
-# def WhisperShit():
-#     model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        
-
-#---------------------PORCUPINE-------------------------
-import pvporcupine
-from pvrecorder import PvRecorder
-
-def get_mic_state():
-    # Set up the PvRecorder with the minimum enrollment samples
-    DEFAULT_DEVICE_INDEX = -1
-    recorder = PvRecorder(
-        device_index=DEFAULT_DEVICE_INDEX,
-        frame_length=512
-    )
-
-
-    porcupine = pvporcupine.create(
-    access_key='V8ZLdwTq3DHObCXeTZjWPOJs1ciBCmjvjIJNE7O3HTDQQXD2kuBcog==',
-    keyword_paths=['Hey-Aura_en_windows_v3_0_0.ppn']
-    #   keywords=['picovoice', 'bumblebee','Hey Aura'],
-    #   model_path='Hey-Aura_en_windows_v3_0_0.ppn'
-    )
-
-
-    recorder.start()
-    while True:
-        audio_frame = recorder.read()
-        keyword_index = porcupine.process(audio_frame)
-
-        if keyword_index == 0:
-            print('Hey Aura detected')
-            return 1
-        else:
-            # get_mic_state()
-            return 0
-
-#----------------Detect Voice for 5 secs-------------------
-
+    socketio.run(app, debug=True)

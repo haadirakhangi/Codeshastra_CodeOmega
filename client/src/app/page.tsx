@@ -56,9 +56,8 @@ export default function SignupFormDemo() {
         }));
         setRecording(false);
         stopRecordingTimer();
-        console.log(formData);
+        console.log(formData)
         // alert("Recording done successfully"); // Show recording success message
-         // Call submitForm function after recording is done
       };
     }
   };
@@ -74,16 +73,10 @@ export default function SignupFormDemo() {
     setRecordingTime(0); // Reset recording time when stopped
   };
 
-  const submitForm = async () => {
+  const handleSubmit = async () => {
     try {
-      const formDataObj = new FormData();
-      formDataObj.append('firstname', formData.firstname);
-      formDataObj.append('lastname', formData.lastname);
-      formDataObj.append('email', formData.email);
-      formDataObj.append('password', formData.password);
-      formDataObj.append('voice_data', formData.voice_data); // Append audio blob
-      
-      const response = await axios.post("http://127.0.0.1:5000/register", formDataObj);
+      console.log(formData);
+      const response = await axios.post("http://127.0.0.1:5000/register", formData);
       console.log("Form submitted:", response.data);
       
       // Handle successful form submission here
@@ -134,7 +127,7 @@ export default function SignupFormDemo() {
           <span className="ml-2">{formatTime(recordingTime)}</span> {/* Display live recording time */}
         </LabelInputContainer>
 
-        <button type="button" onClick={submitForm} className="bg-gradient-to-br relative group/btn from-black dark:from-zinc-900 dark:to-zinc-900 to-neutral-600 block dark:bg-zinc-800 w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset]">
+        <button type="button"  onClick={handleSubmit} className="bg-gradient-to-br relative group/btn from-black dark:from-zinc-900 dark:to-zinc-900 to-neutral-600 block dark:bg-zinc-800 w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset]">
           Sign up &rarr;
         </button>
 
