@@ -70,3 +70,19 @@ class Tasks ():
             agent = agent
         )
     
+    def search_directory_task(agent, user_request):
+        return Task(
+            description=dedent(f"""\
+                **Task Description**:
+                As a Senior Directory Manager and Script Execution, your task is to meticulously search through the user's directory structure to identify the required files, directories, or patterns specified by the user. 
+                
+                Your goal is to generate a valid Windows command tailored to the user's needs, facilitating seamless navigation, file retrieval, or script execution within the directory structure. Utilize your advanced skills to craft commands that efficiently address the user's objectives while adhering to best practices and security protocols. Example commands: 'dir', 'mkdir new_folder'
+
+                **USER'S REQUEST**:
+                {user_request}
+            """),
+            expected_output="The expected output MUST ONLY be a valid Windows command to be executed.",
+            agent=agent
+        )
+
+        

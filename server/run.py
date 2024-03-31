@@ -11,12 +11,11 @@ from openai import OpenAI
 import time
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
-from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool, send_emails_tool, create_calender_events_tool, list_calender_events_tool
+from tools import search_tool, weather_tool, calculator_tool, filter_emails_tool, draft_emails_tool, send_emails_tool, create_calender_events_tool, list_calender_events_tool,run_script_bash
 from agents import Agents
 from tasks import Tasks
 from crewai import Crew
 from datetime import datetime, timedelta
-
 
 float_init()
 
@@ -230,6 +229,23 @@ tools = [
             }
         }
     },
+        {
+        'type': 'function',
+        'function': {
+            'name': 'run_script_bash',
+            'description': "Run all the os related command or scripts requested by the user",
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'user_request': {
+                        'description': "The users request Example: Make a directory xyz, Run the data analysis script.",
+                        'type': 'string'
+                    },
+                },
+                'required': ['user_request']
+            }
+        }
+    },
 ]
 
 
@@ -241,7 +257,8 @@ available_tools = {
     'draft_emails_tool': draft_emails_tool,
     'send_emails_tool': send_emails_tool,
     "create_calender_events_tool": create_calender_events_tool,
-    "list_calender_events_tool": list_calender_events_tool
+    "list_calender_events_tool": list_calender_events_tool,
+    "run_script_bash" : run_script_bash
 }
 
 def wait_on_run(run_id, thread_id):
@@ -319,14 +336,16 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
                         output = tool_to_use(start_date = start_datetime, end_date=end_datetime, summary = summary, location=location, description=description)  
                     else:
                         output = tool_to_use(start_date = start_datetime, end_date=end_datetime, summary = summary, location=location)  
-
                 else:
                     output = tool_to_use(start_date = start_datetime, end_date=end_datetime, summary = summary)  
-  
-                    
+            elif tool_name=='run_script_bash':
+                user_request = json.loads(tool_args)['user_request']    
+                output = tool_to_use(user_request)  
+                print('OUTPUT', output)
+                   
             if output:
-                tools_outputs.append(
-                    {'tool_call_id': tool_call_id, 'output': output})
+                print('OUTPUT 2', output)
+                tools_outputs.append({'tool_call_id': tool_call_id, 'output': output})
 
     return CLIENT.beta.threads.runs.submit_tool_outputs(thread_id=thread_id, run_id=run_id, tool_outputs=tools_outputs)
 

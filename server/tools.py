@@ -202,4 +202,21 @@ def calculator_tool(operation:str)-> str:
   except SyntaxError:
     return "Error: Invalid syntax in mathematical expression"
   
-  
+def run_script_bash(user_request):
+  directory_agent = Agents.directory_search_agent()
+  directory_search_task = Tasks.search_directory_task(agent=directory_agent, user_request=user_request)
+  crew = Crew(
+      agents=[directory_agent],
+      tasks=[directory_search_task],
+      verbose=2
+  )
+  result= crew.kickoff()
+  print('RESULT', result)
+  try:
+    directory_path = "script_test"
+    os.chdir(directory_path)
+    os.system(f'cmd /c "{result}"') 
+    # os.chdir("..")
+    return f"Your command ```{user_request}``` has been executed successfully!"
+  except SyntaxError:
+    return "Error: Invalid syntax in bash command" 
