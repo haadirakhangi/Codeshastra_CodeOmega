@@ -26,6 +26,7 @@ import wave
 
 float_init()
 
+
 tools = [
     {
         'type': 'function',
@@ -180,7 +181,79 @@ tools = [
                 'required': ['message', 'to', 'subject']
             }
         }
-    }
+    },
+        {
+        'type': 'function',
+        'function': {
+            'name': 'create_calender_events_tool',
+            'description': "Adds an event to the calender given the start datetime, end datetime and a summary of the event",
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'start_datetime': {
+                        'description': 'The start datetime of the event. Example: 2024-02-18T10:30:00',
+                        'type': 'string'
+                    },
+                    'end_datetime': {
+                        'description': 'The end datetime of the event. Example: 2024-02-18T10:30:00',
+                        'type': 'string'
+                    },
+                    'summary': {
+                        'description': 'The title of the event.',
+                        'type': 'string'
+                    },
+                    'location': {
+                        'description': 'The location of the event.',
+                        'type': 'string'
+                    },
+                    'description': {
+                        'description': 'The description of the event. Optional.',
+                        'type': 'string'
+                    },
+
+                },
+                'required': ['start_datetime', 'end_datetime', 'summary']
+            }
+        }
+    },
+        {
+        'type': 'function',
+        'function': {
+            'name': 'list_calender_events_tool',
+            'description': "Lists all the event from the user's personal calender between a start datetime and end datetime",
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'start_datetime': {
+                        'description': f"The start datetime of the event. Example: 2024-02-18T10:30:00. Today's datetime:{datetime.now().strftime('%Y-%m-%dT%H:%M:%S')}. Use the today's datetime if the user asks to create an event today.",
+                        'type': 'string'
+                    },
+                    'end_datetime': {
+                        'description': f"The end datetime of the event. Example: 2024-02-18T10:30:00. Today's datetime {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%S')} -- to be used when the user asks to create an event today",
+                        'type': 'string'
+                    },
+                },
+                'required': ['start_datetime', 'end_datetime']
+            }
+        }
+    },
+        {
+        'type': 'function',
+        'function': {
+            'name': 'run_script_bash',
+            'description': "Run all the os related command or scripts requested by the user",
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'user_request': {
+                        'description': "The users request Example: Make a directory xyz, Run the data analysis script.",
+                        'type': 'string'
+                    },
+                },
+                'required': ['user_request']
+            }
+        }
+    },
 ]
 
 
@@ -190,8 +263,12 @@ available_tools = {
     'calculator_tool': calculator_tool,
     'filter_emails_tool': filter_emails_tool,
     'draft_emails_tool': draft_emails_tool,
-    'send_emails_tool': send_emails_tool
+    'send_emails_tool': send_emails_tool,
+    "create_calender_events_tool": create_calender_events_tool,
+    "list_calender_events_tool": list_calender_events_tool,
+    "run_script_bash" : run_script_bash
 }
+
 
 def wait_on_run(run_id, thread_id):
         while True:
@@ -253,12 +330,37 @@ def submit_tool_outputs(thread_id, run_id, tools_to_call):
                         output = tool_to_use(message=message, to=to, subject=subject, cc = cc)
                 else:
                     output = tool_to_use(message=message, to=to, subject=subject)                
-                    
+                
+            elif tool_name=='list_calender_events_tool':
+                start_datetime = json.loads(tool_args)['start_datetime']               
+                end_datetime = json.loads(tool_args)['end_datetime']     
+                output = tool_to_use(start_date = start_datetime, end_date=end_datetime)  
+            elif tool_name=='create_calender_events_tool':
+                start_datetime = json.loads(tool_args)['start_datetime']               
+                end_datetime = json.loads(tool_args)['end_datetime']    
+                summary = json.loads(tool_args)['summary']  
+                if 'location' in json.loads(tool_args):
+                    location = json.loads(tool_args)['location']
+                    if 'description' in json.loads(tool_args):
+                        description = json.loads(tool_args)['description']
+                        output = tool_to_use(start_date = start_datetime, end_date=end_datetime, summary = summary, location=location, description=description)  
+                    else:
+                        output = tool_to_use(start_date = start_datetime, end_date=end_datetime, summary = summary, location=location)  
+                else:
+                    output = tool_to_use(start_date = start_datetime, end_date=end_datetime, summary = summary)  
+            elif tool_name=='run_script_bash':
+                user_request = json.loads(tool_args)['user_request']    
+                output = tool_to_use(user_request)  
+                print('OUTPUT', output)
+                   
             if output:
-                tools_outputs.append(
-                    {'tool_call_id': tool_call_id, 'output': output})
+                print('OUTPUT 2', output)
+                tools_outputs.append({'tool_call_id': tool_call_id, 'output': output})
 
     return CLIENT.beta.threads.runs.submit_tool_outputs(thread_id=thread_id, run_id=run_id, tool_outputs=tools_outputs)
+
+
+
 
 
 # Set up the PvRecorder with the minimum enrollment samples
@@ -272,9 +374,6 @@ porcupine = pvporcupine.create(
 
 audio_bytes = False
 command_given = False
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
 
 def update_chat():
