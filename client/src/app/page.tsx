@@ -1,124 +1,161 @@
 "use client";
-import React from "react";
-import { Label } from "../app/components/ui/label";
-import { Input } from "../app/components/ui/input";
+import React, { useState, useRef } from "react";
+import { Label } from "./components/ui/label";
+import { Input } from "./components/ui/input";
 import { cn } from "@/utils/cn";
-import {
-  IconBrandGithub,
-  IconBrandGoogle,
-  IconBrandOnlyfans,
-} from "@tabler/icons-react";
-import reactElementToJSXString from "react-element-to-jsx-string";
-import { toast, Toaster } from "sonner";
-import { ButtonsCard } from "../app/components/ui/tailwindcss-buttons";
-
-export const buttons = [
-  {
-    name: "Border Magic",
-    description: "Border Magic button for your website",
-    showDot: false,
-    component: (
-      <button className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50">
-        <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]" />
-        <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white backdrop-blur-3xl">
-          <img width="24" height="24" src="https://img.icons8.com/material-rounded/24/FFFFFF/microphone.png" alt="microphone" /> Click to record 
-        </span>
-      </button>
-    ),
-  },
-]
-
+import { IconMicrophone } from "@tabler/icons-react"; // Import the microphone icon
+import axios from 'axios';
 
 export default function SignupFormDemo() {
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("Form submitted");
+  const [formData, setFormData] = useState({
+    firstname: "",
+    lastname: "",
+    email: "",
+    password: "",
+    voice_data: null, // Add voice_data field for storing the audio file
+  });
+  const [recording, setRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const audioRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      [name]: value,
+    }));
   };
+
+  const handleStartRecording = () => {
+    audioChunks.current = [];
+    setRecordingTime(0);
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      audioRecorder.current = new MediaRecorder(stream);
+      audioRecorder.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunks.current.push(e.data);
+        }
+      };
+      audioRecorder.current.start();
+      setRecording(true);
+      startRecordingTimer();
+    }).catch((err) => {
+      console.error("Error accessing microphone:", err);
+    });
+  };
+
+  const handleStopRecording = () => {
+    if (audioRecorder.current && audioRecorder.current.state !== 'inactive') {
+      audioRecorder.current.stop();
+      audioRecorder.current.onstop = () => {
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        setFormData((prevFormData) => ({
+          ...prevFormData,
+          voice_data: audioBlob,
+        }));
+        setRecording(false);
+        stopRecordingTimer();
+        console.log(formData);
+        // alert("Recording done successfully"); // Show recording success message
+        // Call submitForm function after recording is done
+      };
+    }
+  };
+
+  const startRecordingTimer = () => {
+    const timerInterval = setInterval(() => {
+      setRecordingTime((prevTime) => prevTime + 1);
+    }, 1000); // Update recording time every second
+    return () => clearInterval(timerInterval); // Cleanup function to clear the interval
+  };
+
+  const stopRecordingTimer = () => {
+    setRecordingTime(0); // Reset recording time when stopped
+  };
+
+  const submitForm = async () => {
+    try {
+      const formDataObj = new FormData();
+      formDataObj.append('firstname', formData.firstname);
+      formDataObj.append('lastname', formData.lastname);
+      formDataObj.append('email', formData.email);
+      formDataObj.append('password', formData.password);
+      formDataObj.append('voice_data', formData.voice_data); // Append audio blob
+
+      const response = await axios.post("http://127.0.0.1:5000/register", formDataObj);
+      console.log("Form submitted:", response.data);
+
+      // Handle successful form submission here
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      // Handle error here
+    }
+  };
+
   return (
-    <div className="m-12 max-w-md w-full mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-white dark:bg-black">
+    <div className="max-w-md w-full mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-white dark:bg-black mt-12">
       <h2 className="font-bold text-xl text-neutral-800 dark:text-neutral-200">
         Welcome to Aura
       </h2>
       <p className="text-neutral-600 text-sm max-w-sm mt-2 dark:text-neutral-300">
-        Login to Aura if you can because we don&apos;t have a login flow
-        yet
+        Sign Up to Aura
       </p>
 
-      <form className="my-8" onSubmit={handleSubmit}>
+      <form className="my-8">
         <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mb-4">
           <LabelInputContainer>
             <Label htmlFor="firstname">First name</Label>
-            <Input id="firstname" placeholder="Tyler" type="text" />
+            <Input name='firstname' id="firstname" placeholder="Tyler" type="text" onChange={handleChange} value={formData.firstname} />
           </LabelInputContainer>
           <LabelInputContainer>
             <Label htmlFor="lastname">Last name</Label>
-            <Input id="lastname" placeholder="Durden" type="text" />
+            <Input name='lastname' id="lastname" placeholder="Durden" type="text" onChange={handleChange} value={formData.lastname} />
           </LabelInputContainer>
         </div>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="email">Email Address</Label>
-          <Input id="email" placeholder="projectmayhem@fc.com" type="email" />
+          <Input name='email' id="email" placeholder="projectmayhem@fc.com" type="email" onChange={handleChange} value={formData.email} />
         </LabelInputContainer>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" placeholder="••••••••" type="password" />
+          <Input name='password' id="password" placeholder="••••••••" type="password" onChange={handleChange} value={formData.password} />
         </LabelInputContainer>
-        <LabelInputContainer className="mb-8">
-          <Label htmlFor="twitterpassword">Your twitter password</Label>
-          <Input
-            id="twitterpassword"
-            placeholder="••••••••"
-            type="twitterpassword"
-          />
-        </LabelInputContainer>
-        <LabelInputContainer className="mb-8">
-          <div className="w-full">
-            <Toaster position="top-center" />
-            <div className="mb-4">
-              {buttons.map((button, idx) => (
-                <ButtonsCard key={idx}>
-                  {button.component}
-                </ButtonsCard>
-              ))}
+        <LabelInputContainer className="mb-4">
+          {recording ? (
+            <button type="button" className="bg-red-500 hover:bg-red-600 text-white rounded-full w-12 h-12 flex justify-center items-center" onClick={handleStopRecording}>
+              <span>Stop</span>
+            </button>
+          ) : (
+            <div className="flex items-center space-x-3">
+              <button type="button" className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-12 h-12 flex justify-center items-center" onClick={handleStartRecording}>
+                <IconMicrophone size={24} />
+              </button>
+              <Label>Click to Record</Label>
             </div>
-
-          </div>
+          )}
+          <span className="ml-2">{formatTime(recordingTime)}</span> {/* Display live recording time */}
         </LabelInputContainer>
-        <button
-          className="bg-gradient-to-br relative group/btn from-black dark:from-zinc-900 dark:to-zinc-900 to-neutral-600 block dark:bg-zinc-800 w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset]"
-          type="submit"
-        >
+
+        <button type="button" onClick={submitForm} className="bg-gradient-to-br relative group/btn from-red-900 dark:from-zinc-900 dark:to-zinc-900 to-red-700 block dark:bg-zinc-800 w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset]">
           Sign up &rarr;
-          <BottomGradient />
         </button>
 
-
-
         <div className="bg-gradient-to-r from-transparent via-neutral-300 dark:via-neutral-700 to-transparent my-8 h-[1px] w-full" />
-
       </form>
     </div>
   );
 }
 
-const BottomGradient = () => {
-  return (
-    <>
-      <span className="group-hover/btn:opacity-100 block transition duration-500 opacity-0 absolute h-px w-full -bottom-px inset-x-0 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-      <span className="group-hover/btn:opacity-100 blur-sm block transition duration-500 opacity-0 absolute h-px w-1/2 mx-auto -bottom-px inset-x-10 bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
-    </>
-  );
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`; // Format time as MM:SS
 };
 
-const LabelInputContainer = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => {
+const LabelInputContainer = ({ children, className }: { children: React.ReactNode; className?: string; }) => {
   return (
-    <div className={cn("flex flex-col space-y-2 w-full ", className)}>
+    <div className={cn("flex flex-col space-y-2 w-full", className)}>
       {children}
     </div>
   );
